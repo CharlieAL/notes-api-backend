@@ -6,7 +6,6 @@ const palindrome = (string) => {
 }
 
 const average = (array) => {
-  console.log(typeof array)
   if (array.length === 0) return 0
   let sum = 0
   array.forEach((number) => {
