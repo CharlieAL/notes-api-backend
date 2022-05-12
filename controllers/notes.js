@@ -1,6 +1,7 @@
 const noteRouter = require('express').Router()
 const Note = require('../models/Note')
 const User = require('../models/User')
+const userExtractor = require('../middleware/userExtractor')
 
 noteRouter.get('/', async (req, res) => {
   const notes = await Note.find({}).populate('user', {
@@ -20,12 +21,10 @@ noteRouter.get('/:id', (req, res, next) => {
         res.status(404).end()
       }
     })
-    .catch((err) => {
-      next(err)
-    })
+    .catch((err) => next(err))
 })
 
-noteRouter.put('/:id', (req, res, next) => {
+noteRouter.put('/:id', userExtractor, (req, res, next) => {
   const { id } = req.params
   const note = req.body
 
@@ -40,7 +39,7 @@ noteRouter.put('/:id', (req, res, next) => {
     .catch((err) => next(err))
 })
 
-noteRouter.delete('/:id', async (req, res, next) => {
+noteRouter.delete('/:id', userExtractor, async (req, res, next) => {
   const { id } = req.params
   try {
     await Note.findByIdAndRemove(id)
@@ -50,29 +49,29 @@ noteRouter.delete('/:id', async (req, res, next) => {
   }
 })
 
-noteRouter.post('/', async (req, res, next) => {
-  const { content, important = false, userId } = req.body
-
-  const user = await User.findById(userId)
-
-  if (!content) {
-    return res.status(400).json({
-      error: 'require "content" flied is missing'
-    })
-  }
-
-  const newNote = new Note({
-    content,
-    date: new Date(),
-    important,
-    user: user._id
-  })
-
-  // newNote.save().then((savedNote) => {
-  //   res.json(savedNote)
-  // }).catch((err) => next(err))
-
+noteRouter.post('/', userExtractor, async (req, res, next) => {
   try {
+    const { content, important = false } = req.body
+    const { userId } = req
+    const user = await User.findById(userId)
+
+    if (!content) {
+      return res.status(400).json({
+        error: 'require "content" flied is missing'
+      })
+    }
+
+    const newNote = new Note({
+      content,
+      date: new Date(),
+      important,
+      user: user._id
+    })
+
+    // newNote.save().then((savedNote) => {
+    //   res.json(savedNote)
+    // }).catch((err) => next(err))
+
     const saveNote = await newNote.save()
 
     user.notes = user.notes.concat(saveNote._id)
